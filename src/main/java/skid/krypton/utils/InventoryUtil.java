@@ -1,40 +1,41 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
-import skid.krypton.Krypton;
-import skid.krypton.mixin.ClientPlayerInteractionManagerAccessor;
+import com.uranium.UraniumClient;
+import com.uranium.mixin.ClientPlayerInteractionManagerAccessor;
 
 import java.util.function.Predicate;
 
 public final class InventoryUtil {
-    public static void swap(final int selectedSlot) {
+    
+    public static void swap(int selectedSlot) {
         if (selectedSlot < 0 || selectedSlot > 8) {
             return;
         }
-        Krypton.mc.player.getInventory().selectedSlot = selectedSlot;
-        ((ClientPlayerInteractionManagerAccessor) Krypton.mc.interactionManager).syncSlot();
+        UraniumClient.mc.player.getInventory().selectedSlot = selectedSlot;
+        ((ClientPlayerInteractionManagerAccessor) UraniumClient.mc.interactionManager).syncSlot();
     }
 
-    public static boolean swapStack(final Predicate<ItemStack> predicate) {
-        final PlayerInventory getInventory = Krypton.mc.player.getInventory();
+    public static boolean swapStack(Predicate<ItemStack> predicate) {
+        PlayerInventory inventory = UraniumClient.mc.player.getInventory();
         for (int i = 0; i < 9; ++i) {
-            if (predicate.test(getInventory.getStack(i))) {
-                getInventory.selectedSlot = i;
+            if (predicate.test(inventory.getStack(i))) {
+                inventory.selectedSlot = i;
                 return true;
             }
         }
         return false;
     }
 
-    public static boolean swapItem(final Predicate<Item> predicate) {
-        final PlayerInventory getInventory = Krypton.mc.player.getInventory();
+    public static boolean swapItem(Predicate<Item> predicate) {
+        PlayerInventory inventory = UraniumClient.mc.player.getInventory();
         for (int i = 0; i < 9; ++i) {
-            if (predicate.test(getInventory.getStack(i).getItem())) {
-                getInventory.selectedSlot = i;
+            if (predicate.test(inventory.getStack(i).getItem())) {
+                inventory.selectedSlot = i;
                 return true;
             }
         }
@@ -42,20 +43,34 @@ public final class InventoryUtil {
     }
 
     public static boolean swap(Item item) {
-        return InventoryUtil.swapItem((Item item2) -> item2 == item);
+        return swapItem(item2 -> item2 == item);
     }
 
-    public static int getSlot(final Item obj) {
-        final ScreenHandler currentScreenHandler = Krypton.mc.player.currentScreenHandler;
-        if (Krypton.mc.player.currentScreenHandler instanceof GenericContainerScreenHandler) {
-            int n = 0;
-            for (int i = 0; i < ((GenericContainerScreenHandler) Krypton.mc.player.currentScreenHandler).getRows() * 9; ++i) {
-                if (currentScreenHandler.getSlot(i).getStack().getItem().equals(obj)) {
-                    ++n;
+    public static int getSlotCount(Item item) {
+        ScreenHandler handler = UraniumClient.mc.player.currentScreenHandler;
+        if (handler instanceof GenericContainerScreenHandler) {
+            int count = 0;
+            int slots = ((GenericContainerScreenHandler) handler).getRows() * 9;
+            for (int i = 0; i < slots; ++i) {
+                if (handler.getSlot(i).getStack().getItem().equals(item)) {
+                    count++;
                 }
             }
-            return n;
+            return count;
         }
         return 0;
+    }
+    
+    public static int findSlot(Item item) {
+        for (int i = 0; i < 9; i++) {
+            if (UraniumClient.mc.player.getInventory().getStack(i).isOf(item)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
+    public static boolean hasItem(Item item) {
+        return findSlot(item) != -1;
     }
 }

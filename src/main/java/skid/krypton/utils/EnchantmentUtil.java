@@ -1,4 +1,4 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -10,17 +10,18 @@ import net.minecraft.registry.entry.RegistryEntry;
 
 import java.util.Set;
 
-public class EnchantmentUtil {
-    public static boolean hasEnchantment(final ItemStack itemStack, final RegistryKey<?> registryKey) {
+public final class EnchantmentUtil {
+    
+    public static boolean hasEnchantment(ItemStack itemStack, RegistryKey<?> registryKey) {
         if (itemStack.isEmpty()) {
             return false;
         }
-        final Object2IntArrayMap<?> enchantmentMap = new Object2IntArrayMap<>();
+        Object2IntArrayMap<?> enchantmentMap = new Object2IntArrayMap<>();
         populateEnchantmentMap(itemStack, enchantmentMap);
         return containsEnchantment(enchantmentMap, registryKey);
     }
 
-    private static boolean containsEnchantment(final Object2IntMap<?> enchantmentMap, final RegistryKey<?> registryKey) {
+    private static boolean containsEnchantment(Object2IntMap<?> enchantmentMap, RegistryKey<?> registryKey) {
         for (Object enchantment : enchantmentMap.keySet()) {
             if (((RegistryEntry) enchantment).matchesKey(registryKey)) {
                 return true;
@@ -29,7 +30,7 @@ public class EnchantmentUtil {
         return false;
     }
 
-    public static void populateEnchantmentMap(final ItemStack itemStack, final Object2IntMap enchantmentMap) {
+    public static void populateEnchantmentMap(ItemStack itemStack, Object2IntMap enchantmentMap) {
         enchantmentMap.clear();
         if (!itemStack.isEmpty()) {
             Set<?> enchantments;
@@ -38,8 +39,11 @@ public class EnchantmentUtil {
             } else {
                 enchantments = itemStack.getEnchantments().getEnchantmentEntries();
             }
-            for (final Object enchantmentEntry : enchantments) {
-                enchantmentMap.put(((Object2IntMap.Entry<?>) enchantmentEntry).getKey(), ((Object2IntMap.Entry<?>) enchantmentEntry).getIntValue());
+            for (Object enchantmentEntry : enchantments) {
+                enchantmentMap.put(
+                    ((Object2IntMap.Entry<?>) enchantmentEntry).getKey(), 
+                    ((Object2IntMap.Entry<?>) enchantmentEntry).getIntValue()
+                );
             }
         }
     }

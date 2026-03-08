@@ -1,44 +1,47 @@
 plugins {
     id 'fabric-loom' version '1.10-SNAPSHOT'
     id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 version = project.mod_version
 group = project.maven_group
 
-base {
-    archivesName = project.archives_base_name
-}
-
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
 configurations {
-    shadowImpl
-
-    implementation.extendsFrom shadowImpl
+    shadow
+    implementation.extendsFrom shadow
 }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    
+    // For injection
+    shadow 'com.sun:tools:1.8'
+    shadow 'org.ow2.asm:asm:9.6'
+    shadow 'org.ow2.asm:asm-commons:9.6'
 }
 
-processResources {
-    inputs.property "version", project.version
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
+shadowJar {
+    configurations = [project.configurations.shadow]
+    archiveClassifier.set('full')
+    
+    manifest {
+        attributes(
+            'Premain-Class': 'com.uranium.inject.Agent',
+            'Agent-Class': 'com.uranium.inject.Agent',
+            'Can-Retransform-Classes': 'true',
+            'Can-Redefine-Classes': 'true'
+        )
     }
+    
+    relocate 'org.objectweb.asm', 'com.uranium.libs.asm'
 }
 
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
-}
-
-java {
-    targetCompatibility = JavaVersion.VERSION_17
-}
+build.dependsOn shadowJar

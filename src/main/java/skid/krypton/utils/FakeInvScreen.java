@@ -1,4 +1,4 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.entity.player.PlayerEntity;

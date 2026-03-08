@@ -1,4 +1,4 @@
-package skid.krypton.utils.meteorrejects;
+package com.uranium.utils.mining;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.registry.BuiltinRegistries;
@@ -20,9 +20,10 @@ import net.minecraft.world.gen.heightprovider.HeightProvider;
 import net.minecraft.world.gen.placementmodifier.CountPlacementModifier;
 import net.minecraft.world.gen.placementmodifier.HeightRangePlacementModifier;
 import net.minecraft.world.gen.placementmodifier.RarityFilterPlacementModifier;
-import skid.krypton.mixin.CountPlacementModifierAccessor;
-import skid.krypton.mixin.HeightRangePlacementModifierAccessor;
-import skid.krypton.mixin.RarityFilterPlacementModifierAccessor;
+import com.uranium.UraniumClient;
+import com.uranium.mixin.CountPlacementModifierAccessor;
+import com.uranium.mixin.HeightRangePlacementModifierAccessor;
+import com.uranium.mixin.RarityFilterPlacementModifierAccessor;
 
 import java.awt.*;
 import java.util.List;
@@ -30,86 +31,119 @@ import java.util.*;
 import java.util.stream.Stream;
 
 public class Ore {
-    public int a;
-    public int b;
-    public IntProvider c;
-    public HeightProvider d;
-    public HeightContext e;
-    public float f;
-    public float g;
-    public int h;
-    public Color i;
-    public boolean j;
+    public int generationStep;
+    public int index;
+    public IntProvider countProvider;
+    public HeightProvider heightProvider;
+    public HeightContext heightContext;
+    public float discardChance;
+    public float rarityChance;
+    public int veinSize;
+    public Color color;
+    public boolean isScattered;
 
     public static Map<RegistryKey<Biome>, List<Ore>> register() {
         RegistryWrapper.WrapperLookup wrapperLookup = BuiltinRegistries.createWrapperLookup();
-        RegistryWrapper.Impl<PlacedFeature> impl = wrapperLookup.getWrapperOrThrow(RegistryKeys.PLACED_FEATURE);
-        var l = wrapperLookup.getWrapperOrThrow(RegistryKeys.WORLD_PRESET).getOrThrow(WorldPresets.DEFAULT).value().createDimensionsRegistryHolder().dimensions().get(DimensionOptions.NETHER).chunkGenerator().getBiomeSource().getBiomes().stream().toList();
-        var l2 = PlacedFeatureIndexer.collectIndexedFeatures(l, registryEntry -> registryEntry.value().getGenerationSettings().getFeatures(), true);
+        RegistryWrapper.Impl<PlacedFeature> placedFeatureRegistry = wrapperLookup.getWrapperOrThrow(RegistryKeys.PLACED_FEATURE);
+        
+        var biomes = wrapperLookup.getWrapperOrThrow(RegistryKeys.WORLD_PRESET)
+            .getOrThrow(WorldPresets.DEFAULT)
+            .value()
+            .createDimensionsRegistryHolder()
+            .dimensions()
+            .get(DimensionOptions.NETHER)
+            .chunkGenerator()
+            .getBiomeSource()
+            .getBiomes()
+            .stream()
+            .toList();
+            
+        var indexedFeatures = PlacedFeatureIndexer.collectIndexedFeatures(
+            biomes, 
+            registryEntry -> registryEntry.value().getGenerationSettings().getFeatures(), 
+            true
+        );
+        
         Map<PlacedFeature, Ore> ores = new HashMap<>();
-        var registry = OrePlacedFeatures.ORE_DEBRIS_SMALL;
-        Ore.register(ores, l2, impl, registry, 7, new Color(209, 27, 245));
-        RegistryKey<PlacedFeature> registryKey2 = OrePlacedFeatures.ORE_ANCIENT_DEBRIS_LARGE;
-        Ore.register(ores, l2, impl, registryKey2, 7, new Color(209, 27, 245));
-        Map<RegistryKey<Biome>, List<Ore>> hashMap2 = new HashMap<>();
-        l.forEach(registryEntry -> {
-            hashMap2.put(registryEntry.getKey().get(), new ArrayList<>());
-            Stream<PlacedFeature> stream = registryEntry.value().getGenerationSettings().getFeatures().stream().flatMap(RegistryEntryList::stream).map(RegistryEntry::value);
-            Objects.requireNonNull(ores);
-            stream.filter(ores::containsKey).forEach(placedFeature -> hashMap2.get(registryEntry.getKey().get()).add(ores.get(placedFeature)));
+        
+        // Register ores
+        registerOre(ores, indexedFeatures, placedFeatureRegistry, 
+                   OrePlacedFeatures.ORE_DEBRIS_SMALL, 7, new Color(209, 27, 245));
+        registerOre(ores, indexedFeatures, placedFeatureRegistry, 
+                   OrePlacedFeatures.ORE_ANCIENT_DEBRIS_LARGE, 7, new Color(209, 27, 245));
+        
+        Map<RegistryKey<Biome>, List<Ore>> biomeOreMap = new HashMap<>();
+        
+        biomes.forEach(biomeEntry -> {
+            biomeOreMap.put(biomeEntry.getKey().get(), new ArrayList<>());
+            
+            Stream<PlacedFeature> featureStream = biomeEntry.value()
+                .getGenerationSettings()
+                .getFeatures()
+                .stream()
+                .flatMap(RegistryEntryList::stream)
+                .map(RegistryEntry::value);
+                
+            featureStream.filter(ores::containsKey)
+                .forEach(placedFeature -> 
+                    biomeOreMap.get(biomeEntry.getKey().get()).add(ores.get(placedFeature))
+                );
         });
-        return hashMap2;
+        
+        return biomeOreMap;
     }
 
-    private static void register(
-            Map<PlacedFeature, Ore> map,
-            List<PlacedFeatureIndexer.IndexedFeatures> indexer,
-            RegistryWrapper.Impl<PlacedFeature> oreRegistry,
+    private static void registerOre(
+            Map<PlacedFeature, Ore> oreMap,
+            List<PlacedFeatureIndexer.IndexedFeatures> indexedFeatures,
+            RegistryWrapper.Impl<PlacedFeature> placedFeatureRegistry,
             RegistryKey<PlacedFeature> oreKey,
             int genStep,
             Color color
     ) {
-        var orePlacement = oreRegistry.getOrThrow(oreKey).value();
-
-        int index = indexer.get(genStep).indexMapping().applyAsInt(orePlacement);
-
+        PlacedFeature orePlacement = placedFeatureRegistry.getOrThrow(oreKey).value();
+        int index = indexedFeatures.get(genStep).indexMapping().applyAsInt(orePlacement);
         Ore ore = new Ore(orePlacement, genStep, index, color);
-
-        map.put(orePlacement, ore);
+        oreMap.put(orePlacement, ore);
     }
 
-    private Ore(final PlacedFeature obj, final int a, final int b, final Color i) {
-        this.c = ConstantIntProvider.create(1);
-        this.f = 1.0f;
-        this.a = a;
-        this.b = b;
-        this.i = i;
-        this.e = new HeightContext(null, HeightLimitView.create(MinecraftClient.getInstance().world.getBottomY(), MinecraftClient.getInstance().world.getDimension().logicalHeight()));
-        for (final Object next : obj.placementModifiers()) {
-            if (next instanceof CountPlacementModifier) {
-                this.c = ((CountPlacementModifierAccessor) next).getCount();
-            } else if (next instanceof HeightRangePlacementModifier) {
-                this.d = ((HeightRangePlacementModifierAccessor) next).getHeight();
-            } else {
-                if (!(next instanceof RarityFilterPlacementModifier)) {
-                    continue;
-                }
-                this.f = (float) ((RarityFilterPlacementModifierAccessor) next).getChance();
+    private Ore(PlacedFeature placedFeature, int genStep, int featureIndex, Color oreColor) {
+        this.countProvider = ConstantIntProvider.create(1);
+        this.rarityChance = 1.0f;
+        this.generationStep = genStep;
+        this.index = featureIndex;
+        this.color = oreColor;
+        this.heightContext = new HeightContext(
+            null, 
+            HeightLimitView.create(
+                MinecraftClient.getInstance().world.getBottomY(), 
+                MinecraftClient.getInstance().world.getDimension().logicalHeight()
+            )
+        );
+
+        for (Object modifier : placedFeature.placementModifiers()) {
+            if (modifier instanceof CountPlacementModifier) {
+                this.countProvider = ((CountPlacementModifierAccessor) modifier).getCount();
+            } else if (modifier instanceof HeightRangePlacementModifier) {
+                this.heightProvider = ((HeightRangePlacementModifierAccessor) modifier).getHeight();
+            } else if (modifier instanceof RarityFilterPlacementModifier) {
+                this.rarityChance = (float) ((RarityFilterPlacementModifierAccessor) modifier).getChance();
             }
         }
-        final FeatureConfig config = obj.feature().value().config();
+
+        FeatureConfig config = placedFeature.feature().value().config();
         if (config instanceof OreFeatureConfig) {
-            this.g = ((OreFeatureConfig) config).discardOnAirChance;
-            this.h = ((OreFeatureConfig) config).size;
-            if (obj.feature().value().feature() instanceof ScatteredOreFeature) {
-                this.j = true;
-            }
-            return;
+            OreFeatureConfig oreConfig = (OreFeatureConfig) config;
+            this.discardChance = oreConfig.discardOnAirChance;
+            this.veinSize = oreConfig.size;
+            this.isScattered = placedFeature.feature().value().feature() instanceof ScatteredOreFeature;
+        } else {
+            throw new IllegalStateException("Config for " + placedFeature + " is not OreFeatureConfig");
         }
-        throw new IllegalStateException("config for " + obj + "is not OreFeatureConfig.class");
     }
 
-    private static byte[] dwyrwvxcbpxjhuh() {
+    // Anti-tamper verification method
+    private static byte[] getVerificationBytes() {
         return new byte[]{40, 4, 103, 33, 11, 101, 15, 97, 99, 53, 50, 44, 91, 16, 69, 71, 114, 86, 103, 108, 27, 65};
     }
 }

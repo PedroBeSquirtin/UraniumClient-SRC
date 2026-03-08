@@ -1,4 +1,4 @@
-package skid.krypton.utils.embed;
+package com.uranium.utils.webhook;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.*;
@@ -11,245 +11,230 @@ import java.util.List;
 import java.util.*;
 
 public class DiscordWebhook {
-    private final String content;
-    private String b;
-    private String c;
-    private String d;
-    private boolean e;
-    private final List<EmbedObject> embeds;
+    private final String url;
+    private String content;
+    private String username;
+    private String avatarUrl;
+    private boolean tts;
+    private final List<EmbedObject> embeds = new ArrayList<>();
 
-    public DiscordWebhook(final String a) {
-        this.embeds = new ArrayList<>();
-        this.content = a;
+    public DiscordWebhook(String webhookUrl) {
+        this.url = webhookUrl;
     }
 
-    public void a(final String b) {
-        this.b = b;
+    public void setContent(String content) {
+        this.content = content;
     }
 
-    public void b(final String c) {
-        this.c = c;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public void c(final String d) {
-        this.d = d;
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
-    public void a(final boolean e) {
-        this.e = e;
+    public void setTts(boolean tts) {
+        this.tts = tts;
     }
 
-    public void addEmbed(final EmbedObject bn) {
-        this.embeds.add(bn);
+    public void addEmbed(EmbedObject embed) {
+        this.embeds.add(embed);
     }
 
-    @SuppressWarnings("deprecation")
-    public void execute() throws Throwable {
-        if (this.b == null && this.embeds.isEmpty()) {
+    public void execute() throws Exception {
+        if (content == null && embeds.isEmpty()) {
             throw new IllegalArgumentException("Set content or add at least one EmbedObject");
         }
-        final JSONObject JSONSerializer = new JSONObject();
-        JSONSerializer.put("content", this.b);
-        JSONSerializer.put("username", this.c);
-        JSONSerializer.put("avatar_url", this.d);
-        JSONSerializer.put("tts", this.e);
-        if (!this.embeds.isEmpty()) {
-            final ArrayList<JSONObject> list = new ArrayList<>();
-            for (EmbedObject next : this.embeds) {
+
+        JSONObject json = new JSONObject();
+        json.put("content", content);
+        json.put("username", username);
+        json.put("avatar_url", avatarUrl);
+        json.put("tts", tts);
+
+        if (!embeds.isEmpty()) {
+            List<JSONObject> embedObjects = new ArrayList<>();
+            
+            for (EmbedObject embed : embeds) {
                 JSONObject jsonEmbed = new JSONObject();
-                jsonEmbed.put("title", next.title);
-                jsonEmbed.put("description", next.description);
-                jsonEmbed.put("url", next.url);
-                if (next.color != null) {
-                    Color color = next.color;
-                    jsonEmbed.put("color", ((color.getRed() << 8) + color.getGreen() << 8) + color.getBlue());
+                jsonEmbed.put("title", embed.title);
+                jsonEmbed.put("description", embed.description);
+                jsonEmbed.put("url", embed.url);
+
+                if (embed.color != null) {
+                    Color color = embed.color;
+                    int rgb = (color.getRed() << 16) + (color.getGreen() << 8) + color.getBlue();
+                    jsonEmbed.put("color", rgb);
                 }
-                Footer footer = next.footer;
-                Image image = next.image;
-                Thumbnail thumbnail = next.thumbnail;
-                Author author = next.author;
-                List<Field> fields = next.fields;
-                if (footer != null) {
+
+                if (embed.footer != null) {
                     JSONObject jsonFooter = new JSONObject();
-                    jsonFooter.put("text", footer.text);
-                    jsonFooter.put("icon_url", footer.iconUrl);
+                    jsonFooter.put("text", embed.footer.text);
+                    jsonFooter.put("icon_url", embed.footer.iconUrl);
                     jsonEmbed.put("footer", jsonFooter);
                 }
-                if (image != null) {
+
+                if (embed.image != null) {
                     JSONObject jsonImage = new JSONObject();
-                    jsonImage.put("url", image.url);
+                    jsonImage.put("url", embed.image.url);
                     jsonEmbed.put("image", jsonImage);
                 }
-                if (thumbnail != null) {
+
+                if (embed.thumbnail != null) {
                     JSONObject jsonThumbnail = new JSONObject();
-                    jsonThumbnail.put("url", thumbnail.url);
+                    jsonThumbnail.put("url", embed.thumbnail.url);
                     jsonEmbed.put("thumbnail", jsonThumbnail);
                 }
-                if (author != null) {
+
+                if (embed.author != null) {
                     JSONObject jsonAuthor = new JSONObject();
-                    jsonAuthor.put("name", author.name);
-                    jsonAuthor.put("url", author.url);
-                    jsonAuthor.put("icon_url", author.iconUrl);
+                    jsonAuthor.put("name", embed.author.name);
+                    jsonAuthor.put("url", embed.author.url);
+                    jsonAuthor.put("icon_url", embed.author.iconUrl);
                     jsonEmbed.put("author", jsonAuthor);
                 }
-                final ArrayList<JSONObject> jsonFields = new ArrayList<>();
-                for (Field field : fields) {
+
+                List<JSONObject> jsonFields = new ArrayList<>();
+                for (Field field : embed.fields) {
                     JSONObject jsonField = new JSONObject();
-                    jsonField.put("name", field.a());
-                    jsonField.put("value", field.b());
-                    jsonField.put("inline", field.c());
+                    jsonField.put("name", field.name);
+                    jsonField.put("value", field.value);
+                    jsonField.put("inline", field.inline);
                     jsonFields.add(jsonField);
                 }
                 jsonEmbed.put("fields", jsonFields.toArray());
-                list.add(jsonEmbed);
 
+                embedObjects.add(jsonEmbed);
             }
-            JSONSerializer.put("embeds", list.toArray());
+
+            json.put("embeds", embedObjects.toArray());
         }
-        URLConnection openConnection = new URL(this.content).openConnection();
-        openConnection.addRequestProperty("Content-Type", "application/json");
-        openConnection.addRequestProperty("User-Agent", "YourLocalLinuxUser");
-        openConnection.setDoOutput(true);
-        ((HttpsURLConnection) openConnection).setRequestMethod("POST");
-        OutputStream outputStream = openConnection.getOutputStream();
-        outputStream.write(JSONSerializer.toString().getBytes(StandardCharsets.UTF_8));
-        outputStream.flush();
-        outputStream.close();
-        openConnection.getInputStream().close();
-        ((HttpsURLConnection) openConnection).disconnect();
+
+        URLConnection connection = new URL(url).openConnection();
+        connection.addRequestProperty("Content-Type", "application/json");
+        connection.addRequestProperty("User-Agent", "Uranium-Client/1.0");
+        connection.setDoOutput(true);
+        
+        HttpsURLConnection httpsConnection = (HttpsURLConnection) connection;
+        httpsConnection.setRequestMethod("POST");
+
+        try (OutputStream outputStream = connection.getOutputStream()) {
+            outputStream.write(json.toString().getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        }
+
+        connection.getInputStream().close();
+        httpsConnection.disconnect();
     }
 
-
     static class JSONObject {
-        private final HashMap<String, Object> a;
+        private final Map<String, Object> map = new HashMap<>();
 
-        JSONObject() {
-            this.a = new HashMap<>();
-        }
-
-        void put(final String key, final Object value) {
+        void put(String key, Object value) {
             if (value != null) {
-                this.a.put(key, value);
+                map.put(key, value);
             }
         }
 
         @Override
         public String toString() {
-            final StringBuilder sb = new StringBuilder();
-            final Set<Map.Entry<String, Object>> entrySet = this.a.entrySet();
+            StringBuilder sb = new StringBuilder();
             sb.append("{");
-            int n = 0;
-            for (final Map.Entry<String, Object> next : entrySet) {
-                final Object value = next.getValue();
-                sb.append(this.a(next.getKey())).append(":");
+            
+            int count = 0;
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                sb.append(quote(entry.getKey())).append(":");
+                
+                Object value = entry.getValue();
                 if (value instanceof String) {
-                    sb.append(this.a(String.valueOf(value)));
-                } else if (value instanceof Integer) {
-                    sb.append(Integer.valueOf(String.valueOf(value)));
-                } else if (value instanceof Boolean) {
+                    sb.append(quote((String) value));
+                } else if (value instanceof Integer || value instanceof Boolean) {
                     sb.append(value);
                 } else if (value instanceof JSONObject) {
                     sb.append(value);
-                } else if (value.getClass().isArray()) {
+                } else if (value != null && value.getClass().isArray()) {
                     sb.append("[");
-                    for (int length = Array.getLength(value), i = 0; i < length; ++i) {
-                        final StringBuilder append = sb.append(Array.get(value, i).toString());
-                        String str;
-                        if (i != length - 1) {
-                            str = ",";
-                        } else {
-                            str = "";
-                        }
-                        append.append(str);
+                    int length = Array.getLength(value);
+                    for (int i = 0; i < length; i++) {
+                        sb.append(Array.get(value, i).toString());
+                        if (i < length - 1) sb.append(",");
                     }
                     sb.append("]");
                 }
-                ++n;
-                sb.append(n == entrySet.size() ? "}" : ",");
+                
+                count++;
+                sb.append(count == map.size() ? "}" : ",");
             }
+            
             return sb.toString();
         }
 
-        private String a(final String s) {
-            return "\"" + s;
+        private String quote(String s) {
+            return "\"" + s + "\"";
         }
     }
 
     public static class EmbedObject {
-        public String title;
-        public String description;
-        public String url;
-        public Color color;
-        public Footer footer;
-        public DiscordWebhook.Thumbnail thumbnail;
-        public Image image;
-        public Author author;
-        public final List<Field> fields;
+        private String title;
+        private String description;
+        private String url;
+        private Color color;
+        private Footer footer;
+        private Thumbnail thumbnail;
+        private Image image;
+        private Author author;
+        private final List<Field> fields = new ArrayList<>();
 
-        public EmbedObject() {
-            this.fields = new ArrayList<>();
-        }
-
-        public EmbedObject setDescription(String b) {
-            this.description = b;
+        public EmbedObject setTitle(String title) {
+            this.title = title;
             return this;
         }
 
-        public EmbedObject setColor(Color d) {
-            this.color = d;
+        public EmbedObject setDescription(String description) {
+            this.description = description;
             return this;
         }
 
-        public EmbedObject setTitle(String a) {
-            this.title = a;
+        public EmbedObject setUrl(String url) {
+            this.url = url;
             return this;
         }
 
-        public EmbedObject setUrl(String c) {
-            this.url = c;
+        public EmbedObject setColor(Color color) {
+            this.color = color;
             return this;
         }
 
-        public EmbedObject setFooter(String e, String f) {
-            this.footer = new Footer(e, f);
+        public EmbedObject setFooter(String text, String iconUrl) {
+            this.footer = new Footer(text, iconUrl);
             return this;
         }
 
-        public EmbedObject setImage(Image f) {
-            this.image = f;
+        public EmbedObject setImage(String url) {
+            this.image = new Image(url);
             return this;
         }
 
-        public EmbedObject setThumbnail(String g) {
-            this.thumbnail = new Thumbnail(g);
+        public EmbedObject setThumbnail(String url) {
+            this.thumbnail = new Thumbnail(url);
             return this;
         }
 
-        public EmbedObject setAuthor(Author h) {
-            this.author = h;
+        public EmbedObject setAuthor(String name, String url, String iconUrl) {
+            this.author = new Author(name, url, iconUrl);
             return this;
         }
 
-        public EmbedObject addField(final String a, final String b, final boolean c) {
-            this.fields.add(new Field(a, b, c));
+        public EmbedObject addField(String name, String value, boolean inline) {
+            this.fields.add(new Field(name, value, inline));
             return this;
         }
-
     }
 
-    record Image(String url) {
-    }
-
-    record Footer(String text, String iconUrl) {
-    }
-
-    record Field(String a, String b, boolean c) {
-    }
-
-    record Author(String name, String url, String iconUrl) {
-    }
-
-    record Thumbnail(String url) {
-    }
-
+    private record Image(String url) {}
+    private record Footer(String text, String iconUrl) {}
+    private record Field(String name, String value, boolean inline) {}
+    private record Author(String name, String url, String iconUrl) {}
+    private record Thumbnail(String url) {}
 }

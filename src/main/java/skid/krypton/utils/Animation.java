@@ -1,8 +1,8 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
-import skid.krypton.module.modules.client.Krypton;
+import com.uranium.module.modules.client.Uranium;
 
-public final class Animation {
+public class Animation {
     private double value;
     private final double end;
 
@@ -12,11 +12,11 @@ public final class Animation {
     }
 
     public void animate(double speed, double target) {
-        if (Krypton.animationMode.isMode(Krypton.AnimationMode.NORMAL)) {
+        if (Uranium.animationMode.isMode(Uranium.AnimationMode.NORMAL)) {
             this.value = MathUtil.approachValue((float) speed, this.value, target);
-        } else if (Krypton.animationMode.isMode(Krypton.AnimationMode.POSITIVE)) {
+        } else if (Uranium.animationMode.isMode(Uranium.AnimationMode.POSITIVE)) {
             this.value = MathUtil.smoothStep(speed, this.value, target);
-        } else if (Krypton.animationMode.isMode(Krypton.AnimationMode.OFF)) {
+        } else {
             this.value = target;
         }
     }
@@ -25,7 +25,7 @@ public final class Animation {
         return this.value;
     }
 
-    public void setAnimation(final double factor) {
+    public void setAnimation(double factor) {
         this.value = MathUtil.smoothStep(factor, this.value, this.end);
     }
 }

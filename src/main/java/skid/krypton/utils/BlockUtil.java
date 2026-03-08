@@ -1,4 +1,4 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -10,16 +10,15 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.chunk.WorldChunk;
-import skid.krypton.Krypton;
+import com.uranium.UraniumClient;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static skid.krypton.Krypton.mc;
+import static com.uranium.UraniumClient.mc;
 
 public final class BlockUtil {
+    
     public static Stream<WorldChunk> getLoadedChunks() {
         int radius = Math.max(2, mc.options.getClampedViewDistance()) + 3;
         int diameter = radius * 2 + 1;
@@ -46,22 +45,22 @@ public final class BlockUtil {
                 .map(c -> mc.world.getChunk(c.x, c.z)).filter(Objects::nonNull);
     }
 
-    public static boolean isBlockAtPosition(final BlockPos blockPos, final Block block) {
+    public static boolean isBlockAtPosition(BlockPos blockPos, Block block) {
         return mc.world.getBlockState(blockPos).getBlock() == block;
     }
 
-    public static boolean isRespawnAnchorCharged(final BlockPos blockPos) {
+    public static boolean isRespawnAnchorCharged(BlockPos blockPos) {
         return isBlockAtPosition(blockPos, Blocks.RESPAWN_ANCHOR) &&
                 (int) mc.world.getBlockState(blockPos).get((Property) RespawnAnchorBlock.CHARGES) != 0;
     }
 
-    public static boolean isRespawnAnchorUncharged(final BlockPos blockPos) {
+    public static boolean isRespawnAnchorUncharged(BlockPos blockPos) {
         return isBlockAtPosition(blockPos, Blocks.RESPAWN_ANCHOR) &&
                 (int) mc.world.getBlockState(blockPos).get((Property) RespawnAnchorBlock.CHARGES) == 0;
     }
 
-    public static void interactWithBlock(final BlockHitResult blockHitResult, final boolean shouldSwingHand) {
-        final ActionResult result = mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, blockHitResult);
+    public static void interactWithBlock(BlockHitResult blockHitResult, boolean shouldSwingHand) {
+        ActionResult result = mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, blockHitResult);
         if (result.isAccepted() && result.shouldSwingHand() && shouldSwingHand) {
             mc.player.swingHand(Hand.MAIN_HAND);
         }

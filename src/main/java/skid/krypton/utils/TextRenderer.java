@@ -1,49 +1,67 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
-import skid.krypton.font.Fonts;
-import skid.krypton.module.modules.client.Krypton;
+import com.uranium.UraniumClient;
+import com.uranium.font.Fonts;
+import com.uranium.module.modules.client.Uranium;
 
 public final class TextRenderer {
-    public static void drawString(final CharSequence charSequence, final DrawContext drawContext, final int n, final int n2, final int n3) {
-        if (Krypton.useCustomFont.getValue()) {
-            Fonts.FONT.drawString(drawContext.getMatrices(), charSequence, (float) n, (float) n2, n3);
+    
+    public static void drawString(CharSequence text, DrawContext context, int x, int y, int color) {
+        if (Uranium.useCustomFont.getValue()) {
+            Fonts.FONT.drawString(context.getMatrices(), text, x, y, color);
         } else {
-            drawLargeString(charSequence, drawContext, n, n2, n3);
+            drawVanilla(text, context, x, y, color);
         }
     }
 
-    public static int getWidth(final CharSequence charSequence) {
-        if (Krypton.useCustomFont.getValue()) {
-            return Fonts.FONT.getStringWidth(charSequence);
+    public static int getWidth(CharSequence text) {
+        if (Uranium.useCustomFont.getValue()) {
+            return Fonts.FONT.getStringWidth(text);
         }
-        return skid.krypton.Krypton.mc.textRenderer.getWidth(charSequence.toString()) * 2;
+        return UraniumClient.mc.textRenderer.getWidth(text.toString()) * 2;
     }
 
-    public static void drawCenteredString(final CharSequence charSequence, final DrawContext drawContext, final int n, final int n2, final int n3) {
-        if (Krypton.useCustomFont.getValue()) {
-            Fonts.FONT.drawString(drawContext.getMatrices(), charSequence, (float) (n - Fonts.FONT.getStringWidth(charSequence) / 2), (float) n2, n3);
+    public static void drawCenteredString(CharSequence text, DrawContext context, int x, int y, int color) {
+        if (Uranium.useCustomFont.getValue()) {
+            Fonts.FONT.drawString(
+                context.getMatrices(), 
+                text, 
+                x - Fonts.FONT.getStringWidth(text) / 2, 
+                y, 
+                color
+            );
         } else {
-            drawCenteredMinecraftText(charSequence, drawContext, n, n2, n3);
+            drawCenteredVanilla(text, context, x, y, color);
         }
     }
 
-    public static void drawLargeString(final CharSequence charSequence, final DrawContext drawContext, final int n, final int n2, final int n3) {
-        final MatrixStack matrices = drawContext.getMatrices();
+    private static void drawVanilla(CharSequence text, DrawContext context, int x, int y, int color) {
+        MatrixStack matrices = context.getMatrices();
         matrices.push();
         matrices.scale(2.0f, 2.0f, 2.0f);
-        drawContext.drawText(skid.krypton.Krypton.mc.textRenderer, charSequence.toString(), n / 2, n2 / 2, n3, false);
-        matrices.scale(1.0f, 1.0f, 1.0f);
+        context.drawText(UraniumClient.mc.textRenderer, text.toString(), x / 2, y / 2, color, false);
         matrices.pop();
     }
 
-    public static void drawCenteredMinecraftText(final CharSequence charSequence, final DrawContext drawContext, final int n, final int n2, final int n3) {
-        final MatrixStack matrices = drawContext.getMatrices();
+    private static void drawCenteredVanilla(CharSequence text, DrawContext context, int x, int y, int color) {
+        MatrixStack matrices = context.getMatrices();
         matrices.push();
         matrices.scale(2.0f, 2.0f, 2.0f);
-        drawContext.drawText(skid.krypton.Krypton.mc.textRenderer, (String) charSequence, n / 2 - skid.krypton.Krypton.mc.textRenderer.getWidth((String) charSequence) / 2, n2 / 2, n3, false);
-        matrices.scale(1.0f, 1.0f, 1.0f);
+        context.drawText(
+            UraniumClient.mc.textRenderer, 
+            text.toString(), 
+            x / 2 - UraniumClient.mc.textRenderer.getWidth(text.toString()) / 2, 
+            y / 2, 
+            color, 
+            false
+        );
         matrices.pop();
+    }
+    
+    public static void drawStringWithShadow(CharSequence text, DrawContext context, int x, int y, int color) {
+        drawString(text, context, x + 1, y + 1, 0xAA000000);
+        drawString(text, context, x, y, color);
     }
 }

@@ -1,62 +1,85 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector3d;
-import skid.krypton.module.modules.client.Krypton;
-import skid.krypton.module.modules.client.SelfDestruct;
+import com.uranium.UraniumClient;
+import com.uranium.module.modules.client.Uranium;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 
 public final class Utils {
-    public static Color getMainColor(final int n, final int n2) {
-        final int f = Krypton.redColor.getIntValue();
-        final int f2 = Krypton.greenColor.getIntValue();
-        final int f3 = Krypton.blueColor.getIntValue();
-        if (Krypton.enableRainbowEffect.getValue()) {
-            return ColorUtil.a(n2, n);
+    
+    public static Color getMainColor(int alpha, int index) {
+        int r = Uranium.redColor.getValue();
+        int g = Uranium.greenColor.getValue();
+        int b = Uranium.blueColor.getValue();
+        
+        if (Uranium.enableRainbow.getValue()) {
+            return ColorUtil.rainbow(index, alpha);
         }
-        if (Krypton.enableBreathingEffect.getValue()) {
-            return ColorUtil.alphaStep_Skidded_From_Prestige_Client_NumberOne(new Color(f, f2, f3, n), n2, 20);
+        if (Uranium.enableBreathing.getValue()) {
+            return ColorUtil.breathing(new Color(r, g, b, alpha), index, 20);
         }
-        return new Color(f, f2, f3, n);
+        return new Color(r, g, b, alpha);
     }
 
     public static File getCurrentJarPath() throws URISyntaxException {
-        return new File(SelfDestruct.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+        return new File(UraniumClient.class.getProtectionDomain()
+                       .getCodeSource().getLocation().toURI().getPath());
     }
 
-    @SuppressWarnings("deprecation")
-    public static void overwriteFile(final String spec, final File file) {
+    public static void downloadFile(String url, File output) {
         try {
-            final HttpURLConnection connection = (HttpURLConnection) new URL(spec).openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
-            final InputStream is = connection.getInputStream();
-            final FileOutputStream fos = new FileOutputStream(file);
-            final byte[] buf = new byte[1024];
-            while (true) {
-                final int read = is.read(buf);
-                if (read == -1) {
-                    break;
+            
+            try (InputStream is = connection.getInputStream();
+                 FileOutputStream fos = new FileOutputStream(output)) {
+                
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
                 }
-                fos.write(buf, 0, read);
             }
-            fos.close();
-            is.close();
+            
             connection.disconnect();
-        } catch (Throwable _t) {
-            _t.printStackTrace(System.err);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    public static void copyVector(final Vector3d vector3d, final Vec3d vec3d) {
-        vector3d.x = vec3d.x;
-        vector3d.y = vec3d.y;
-        vector3d.z = vec3d.z;
+    public static void copyVector(Vector3d target, Vec3d source) {
+        target.x = source.x;
+        target.y = source.y;
+        target.z = source.z;
+    }
+    
+    public static Vec3d vector3dToVec3d(Vector3d vec) {
+        return new Vec3d(vec.x, vec.y, vec.z);
+    }
+    
+    public static Vector3d vec3dToVector3d(Vec3d vec) {
+        return new Vector3d(vec.x, vec.y, vec.z);
+    }
+    
+    public static String readFile(File file) {
+        try {
+            return new String(java.nio.file.Files.readAllBytes(file.toPath()));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+    
+    public static void writeFile(File file, String content) {
+        try {
+            java.nio.file.Files.write(file.toPath(), content.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

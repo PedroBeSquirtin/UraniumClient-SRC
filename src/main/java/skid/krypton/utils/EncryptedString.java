@@ -1,4 +1,4 @@
-package skid.krypton.utils;
+package com.uranium.utils;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -6,11 +6,11 @@ import java.nio.CharBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
-public class EncryptedString implements AutoCloseable, CharSequence {
+public final class EncryptedString implements AutoCloseable, CharSequence {
     private final char[] key;
     private final char[] value;
     private final int length;
-    private static final SecureRandom random;
+    private static final SecureRandom random = new SecureRandom();
     private boolean closed;
 
     public EncryptedString(String string) {
@@ -25,106 +25,106 @@ public class EncryptedString implements AutoCloseable, CharSequence {
         applyXorEncryption(this.value, this.key, 0, this.length);
     }
 
-    public EncryptedString(final char[] original, final char[] original2) {
+    public EncryptedString(char[] encrypted, char[] encryptionKey) {
         this.closed = false;
-        if (original == null || original2 == null) {
+        if (encrypted == null || encryptionKey == null) {
             throw new IllegalArgumentException("Neither encrypted value nor key can be null");
         }
-        if (original2.length == 0) {
+        if (encryptionKey.length == 0) {
             throw new IllegalArgumentException("Encryption key cannot be empty");
         }
-        this.length = original.length;
-        this.value = Arrays.copyOf(original, original.length);
-        this.key = Arrays.copyOf(original2, original2.length);
+        this.length = encrypted.length;
+        this.value = Arrays.copyOf(encrypted, encrypted.length);
+        this.key = Arrays.copyOf(encryptionKey, encryptionKey.length);
     }
 
-    public static EncryptedString of(final String s) {
+    public static EncryptedString of(String s) {
         return new EncryptedString(s);
     }
 
-    public static EncryptedString of(final String s, final String s2) {
-        if (s == null || s2 == null) {
+    public static EncryptedString of(String encrypted, String key) {
+        if (encrypted == null || key == null) {
             throw new IllegalArgumentException("Neither encrypted data nor key can be null");
         }
-        return new EncryptedString(s.toCharArray(), s2.toCharArray());
+        return new EncryptedString(encrypted.toCharArray(), key.toCharArray());
     }
 
-    private static char[] generateRandomKey(final int n) {
-        final char[] array = new char[n];
-        for (int i = 0; i < n; ++i) {
-            array[i] = (char) EncryptedString.random.nextInt(65536);
+    private static char[] generateRandomKey(int length) {
+        char[] array = new char[length];
+        for (int i = 0; i < length; ++i) {
+            array[i] = (char) random.nextInt(65536);
         }
         return array;
     }
 
-    private static void applyXorEncryption(final char[] array, final char[] array2, final int n, final int n2) {
-        for (int i = 0; i < n2; ++i) {
-            final int n3 = n + i;
-            array[n3] ^= array2[i % array2.length];
+    private static void applyXorEncryption(char[] data, char[] key, int offset, int length) {
+        for (int i = 0; i < length; ++i) {
+            data[offset + i] ^= key[i % key.length];
         }
     }
 
     @Override
     public int length() {
-        this.setClosed();
+        checkClosed();
         return this.length;
     }
 
     @Override
-    public char charAt(final int n) {
-        this.setClosed();
-        if (n < 0 || n >= this.length) {
-            throw new IndexOutOfBoundsException("Index: " + n + ", Length: " + this.length);
+    public char charAt(int index) {
+        checkClosed();
+        if (index < 0 || index >= this.length) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Length: " + this.length);
         }
-        return (char) (this.value[n] ^ this.key[n % this.key.length]);
+        return (char) (this.value[index] ^ this.key[index % this.key.length]);
     }
 
     @NotNull
     @Override
-    public CharSequence subSequence(final int n, final int n2) {
-        this.setClosed();
-        if (n < 0 || n2 > this.length || n > n2) {
-            throw new IndexOutOfBoundsException("Invalid subsequence range: " + n + " to " + n2 + " (length: " + this.length);
+    public CharSequence subSequence(int start, int end) {
+        checkClosed();
+        if (start < 0 || end > this.length || start > end) {
+            throw new IndexOutOfBoundsException("Invalid subsequence range: " + start + " to " + end);
         }
-        final int n3 = n2 - n;
-        final char[] array = new char[n3];
-        System.arraycopy(this.value, n, array, 0, n3);
-        final char[] array2 = new char[n3];
-        for (int i = 0; i < n3; ++i) {
-            array2[i] = this.key[(n + i) % this.key.length];
+        int subLength = end - start;
+        char[] subValue = new char[subLength];
+        char[] subKey = new char[subLength];
+        
+        System.arraycopy(this.value, start, subValue, 0, subLength);
+        for (int i = 0; i < subLength; ++i) {
+            subKey[i] = this.key[(start + i) % this.key.length];
         }
-        applyXorEncryption(array, this.key, 0, n3);
-        applyXorEncryption(array, array2, 0, n3);
-        return new EncryptedString(array, array2);
+        
+        applyXorEncryption(subValue, this.key, 0, subLength);
+        applyXorEncryption(subValue, subKey, 0, subLength);
+        
+        return new EncryptedString(subValue, subKey);
     }
 
     @NotNull
     @Override
     public String toString() {
-        this.setClosed();
-        final char[] array = new char[this.length];
+        checkClosed();
+        char[] decrypted = new char[this.length];
         for (int i = 0; i < this.length; ++i) {
-            array[i] = this.charAt(i);
+            decrypted[i] = this.charAt(i);
         }
-        final String s = new String(array);
-        Arrays.fill(array, '\0');
-        return s;
+        String result = new String(decrypted);
+        Arrays.fill(decrypted, '\0');
+        return result;
     }
 
-    @NotNull
-    public String a() {
-        this.setClosed();
+    public String decrypt() {
         return this.toString();
     }
 
-    public CharBuffer b() {
-        this.setClosed();
-        final CharBuffer allocate = CharBuffer.allocate(this.length);
+    public CharBuffer toCharBuffer() {
+        checkClosed();
+        CharBuffer buffer = CharBuffer.allocate(this.length);
         for (int i = 0; i < this.length; ++i) {
-            allocate.put(i, this.charAt(i));
+            buffer.put(i, this.charAt(i));
         }
-        allocate.flip();
-        return allocate.asReadOnlyBuffer();
+        buffer.flip();
+        return buffer.asReadOnlyBuffer();
     }
 
     @Override
@@ -136,43 +136,34 @@ public class EncryptedString implements AutoCloseable, CharSequence {
         }
     }
 
-    private void setClosed() {
+    private void checkClosed() {
         if (this.closed) {
             throw new IllegalStateException("This EncryptedString has been closed and cannot be used");
         }
     }
 
     @Override
-    public boolean equals(final Object o) {
-        this.setClosed();
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof CharSequence)) {
-            return false;
-        }
-        if (this.length != ((CharSequence) o).length()) {
-            return false;
-        }
+    public boolean equals(Object obj) {
+        checkClosed();
+        if (this == obj) return true;
+        if (!(obj instanceof CharSequence)) return false;
+        
+        CharSequence other = (CharSequence) obj;
+        if (this.length != other.length()) return false;
+        
         for (int i = 0; i < this.length; ++i) {
-            if (this.charAt(i) != ((CharSequence) o).charAt(i)) {
-                return false;
-            }
+            if (this.charAt(i) != other.charAt(i)) return false;
         }
         return true;
     }
 
     @Override
     public int hashCode() {
-        this.setClosed();
-        int n = 0;
+        checkClosed();
+        int hash = 0;
         for (int i = 0; i < this.length; ++i) {
-            n = 31 * n + this.charAt(i);
+            hash = 31 * hash + this.charAt(i);
         }
-        return n;
-    }
-
-    static {
-        random = new SecureRandom();
+        return hash;
     }
 }
